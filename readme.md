@@ -14,6 +14,14 @@ by the script without the use of PETCAT. The BASIC programme is executed by call
 Xemu65. Xemu is terminated right after the creation of the directory. The files are
 copied using C1541.
 
+Three sub-dirs:
+
+![subs](images/git0001.png)
+
+Contents of one sub-dir:
+
+![content](images/git0002.png)
+
 Issues:
 
 * The .D81 has to be pre-existing, e.g. an empty disk image created with XEMU65.
