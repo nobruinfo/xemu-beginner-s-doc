@@ -26,5 +26,6 @@ Issues:
 
 * The .D81 has to be pre-existing, e.g. an empty disk image created with XEMU65.
 * All PC folders to be used in the .D81 have to be lowercase.
-* Since the script uses Windows' TASKKILL after every call of Xemu65 all of its
-  instances are terminated without asking back.
+* ~~Since the script uses Windows' TASKKILL after every call of Xemu65 all of its
+  instances are terminated without asking back.~~ `cbm-shell` is used instead of
+  Xemu to have resolved this.
