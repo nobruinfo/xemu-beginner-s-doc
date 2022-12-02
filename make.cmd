@@ -5,11 +5,17 @@ REM           a structure below this script on your PC:
 REM           
 REM           disks -+- folder1
 REM                  +- folder2
-REM                  |
+REM                  I
 REM                  +- foldern
 REM           
 REM           All folder names have to be lowercase!
+REM
+REM prerequsites: - Python 3 and 'pip install cbmshell'
+REM               - https://pypi.org/project/cbmshell/
+REM               - VICE emulator for C1541 and PETCAT
 REM           
+REM 2022-12-02  nobruinfo  - Replaced Xemu with cbm-shell, see prerequsites.
+REM                        - Disk image generated if not existant.
 REM 2022-11-28  nobruinfo  Initial version.
 REM
 
@@ -18,15 +24,37 @@ setlocal enabledelayedexpansion
 
 CD /D %~dp0
 
+SET PATH=%PATH%;%APPDATA%\Python\Python311\Scripts
+SET PATH=%PATH%;C:\Python311
+SET PATH=%PATH%;C:\Python311\Scripts
+
+REM Now remove all paths that could interfere:
+CALL SET PATH=%%PATH:%LOCALAPPDATA%\Microsoft\WindowsApps=%%
+CALL SET PATH=%%PATH:C:\Program Files (x86)\GnuPG\bin=%%
+CALL SET PATH=%%PATH:C:\Program Files ^(x86^)\Common Files\Oracle\Java\javapath=%%
+CALL SET PATH=%%PATH:C:\ProgramData\Oracle\Java\javapath=%%
+CALL SET PATH=%%PATH:C:\Windows\System32\OpenSSH\=%%
+CALL SET PATH=%%PATH:C:\tools\Cmder=%%
+CALL SET PATH=%%PATH:C:\ProgramData\chocolatey\bin=%%
+CALL SET PATH=%%PATH:;;=;%%
+
 SET VICE=D:\GTK3VICE-3.6.1-win64\bin\
 SET c1541="%VICE%\c1541"
 
 SET PETCAT=D:\GTK3VICE-3.6.1-win64\bin\petcat.exe"
 
-SET XMEGA65=T:\Software\C64\Mega65\xemu-binaries-win64\xmega65.exe
+SET CBMSHELL=cbm-shell
 
 SET D81NAME="%APPDATA%\xemu-lgb\mega65\nobru.d81"
 
+IF NOT EXIST %D81NAME% (
+  REM               disk lbl id
+  ECHO format --type d81 NOBRUINF 2A %D81NAME%>cbmshell.tmp
+  ECHO quit>>cbmshell.tmp
+  %CBMSHELL% @cbmshell.tmp
+)
+
+SET /a sum=2
 for /d %%k in (disks\*) do (
   SET FOLDERNAME=%%~nk
   SET FOLDER=disks\%%~nk
@@ -41,20 +69,11 @@ for /d %%k in (disks\*) do (
   DEL folder.prg
   DEL folder.bas
 
-  REM                   10          MKDIR    "
-  >pref.tmp echo(01 20 10 20 0a 00 fe 51 20 22
-  certutil -f -decodehex pref.tmp prefhex.tmp >nul
-  echo|set /p="!FOLDERUPPER!">folder.tmp
-  REM              "   EOF
-  >suff.tmp echo(22 00 00 00
-  certutil -f -decodehex suff.tmp suffhex.tmp >nul
-  copy /B prefhex.tmp + folder.tmp + suffhex.tmp test.prg
-  del pref.tmp prefhex.tmp folder.tmp suff.tmp suffhex.tmp
-  START "" %XMEGA65% -8 %D81NAME% -besure -prg test.prg
-  TIMEOUT /T 3
-  SET q=%XMEGA65%
-  TASKKILL /F /IM xmega65.exe
-  DEL test.prg
+  ECHO attach %D81NAME%>cbmshell.tmp
+  REM        root            id trk   blks
+  ECHO mkdir 0:!FOLDERUPPER! 00 !sum! 120>>cbmshell.tmp
+  ECHO quit>>cbmshell.tmp
+  %CBMSHELL% @cbmshell.tmp
 
   for /f "tokens=1* delims=?" %%i in ('DIR /B /O:N "!FOLDER!\*.bas"') do (
     SET NAME=%%~ni
@@ -65,6 +84,9 @@ for /d %%k in (disks\*) do (
     %c1541% -attach %D81NAME% -@ "/0:!FOLDERNAME!" -write !FILE!.prg !NAME!
 	DEL !FILE!.prg
   )
+  REM sub-directories contain of three tracks:
+  SET /a sum=!sum!+3
 )
 
 PAUSE
+DEL cbmshell.tmp
